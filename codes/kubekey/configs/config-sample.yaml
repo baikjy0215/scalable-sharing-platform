@@ -1,0 +1,78 @@
+apiVersion: kubekey.kubesphere.io/v1alpha2
+kind: Cluster
+metadata:
+  name: config
+spec:
+  hosts:
+  # Assume that the default port for SSH is 22. Otherwise, add the port number after the IP address. 
+  # If you install Kubernetes on ARM, add "arch: arm64". For example, {...user: ubuntu, password: Qcloud@123, arch: arm64}.
+  - {name: kmaster-1, address: 172.16.0.1, internalAddress: "172.16.0.1,2022::1", password: "", labels: {disk: SSD}}
+  - {name: kmaster-2, address: 172.16.0.2, internalAddress: "172.16.0.2,2022::2", password: "", labels: {disk: SSD}}
+  - {name: kmaster-3, address: 172.16.0.3, internalAddress: "172.16.0.3,2022::3", password: "", labels: {disk: SSD}}
+  - {name: kworker-1, address: 172.16.0.4, internalAddress: "172.16.0.4,2022::4", password: "", labels: {disk: SSD}}
+  - {name: kworker-2, address: 172.16.0.5, internalAddress: "172.16.0.5,2022::5", password: "", labels: {disk: SSD}}
+  - {name: kworker-3, address: 172.16.0.6, internalAddress: "172.16.0.6,2022::6", password: "", labels: {disk: SSD}}
+  roleGroups:
+    etcd:
+    - kmaster-1
+    - kmaster-2
+    - kmaster-3
+    control-plane:
+    - kmaster-1
+    - kmaster-2
+    - kmaster-3
+    worker:
+    - kworker-1
+    - kworker-2
+    - kworker-3
+  controlPlaneEndpoint:
+    # Internal loadbalancer for apiservers. Support: haproxy, kube-vip [Default: ""]
+    internalLoadbalancer: haproxy
+    # Determines whether to use external dns to resolve the control-plane domain. 
+    # If 'externalDNS' is set to 'true', the 'address' needs to be set to "".
+    externalDNS: false  
+    domain: lb.kubesphere.local
+    # The IP address of your load balancer. If you use internalLoadblancer in "kube-vip" mode, a VIP is required here.
+    address: ""      
+    port: 6443
+  system:
+    # The ntp servers of chrony.
+    ntpServers:
+      - time.google.com
+      - time.apple.com
+    timezone: "UTC"
+  kubernetes:
+    #kubelet start arguments
+    #kubeletArgs:
+      # Directory path for managing kubelet files (volume mounts, etc).
+    #  - --root-dir=/var/lib/kubelet
+    version: v1.31.2
+    containerManager: containerd
+    clusterName: cluster.local
+    # Whether to install a script which can automatically renew the Kubernetes control plane certificates. [Default: false]
+    autoRenewCerts: true
+    # masqueradeAll tells kube-proxy to SNAT everything if using the pure iptables proxy mode. [Default: false].
+    masqueradeAll: false
+    # maxPods is the number of Pods that can run on this Kubelet. [Default: 110]
+    maxPods: 110
+    # podPidsLimit is the maximum number of PIDs in any pod. [Default: 10000]
+    podPidsLimit: 10000
+    # The internal network node size allocation. This is the size allocated to each node on your network. [Default: 24]
+    nodeCidrMaskSize: 24
+    # Specify which proxy mode to use. [Default: ipvs]
+    proxyMode: ipvs
+  etcd:
+    # Specify the type of etcd used by the cluster. When the cluster type is k3s, setting this parameter to kubeadm is invalid. [kubekey | kubeadm | external] [Default: kubekey]
+    type: kubekey
+  network:
+    plugin: calico
+    calico:
+      ipipMode: Never  # IPIP Mode to use for the IPv4 POOL created at start up. If set to a value other than Never, vxlanMode should be set to "Never". [Always | CrossSubnet | Never] [Default: Always]
+      vxlanMode: Always  # VXLAN Mode to use for the IPv4 POOL created at start up. If set to a value other than Never, ipipMode should be set to "Never". [Always | CrossSubnet | Never] [Default: Never]
+      vethMTU: 0  # The maximum transmission unit (MTU) setting determines the largest packet size that can be transmitted through your network. By default, MTU is auto-detected. [Default: 0]
+    kubePodsCIDR: 10.233.64.0/18,fd85:ee78:d8a6:8607::1:0000/112
+    kubeServiceCIDR: 10.233.0.0/18,fd85:ee78:d8a6:8607::1000/116
+  storage:
+    openebs:
+      basePath: /var/openebs/local # base path of the local PV provisioner
+  addons: [] # You can install cloud-native addons (Chart or YAML ) by using this field.
